@@ -46,23 +46,6 @@ func main() {
 	createArchive(out, records)
 }
 
-func createArchive(out *os.File, records []record) {
-	for _, r := range records {
-		out.WriteString(r.name)
-		out.Write([]byte{0})
-
-		binary.Write(out, binary.LittleEndian, r.size)
-		binary.Write(out, binary.LittleEndian, r.kind)
-		binary.Write(out, binary.LittleEndian, r.perm)
-
-		if len(r.children) > 0 {
-			createArchive(out, r.children)
-		} else {
-			out.Write(r.content)
-		}
-	}
-}
-
 func createRecord(pathname string) record {
 	fi, err := os.Stat(pathname)
 	fatal(err)
@@ -87,7 +70,7 @@ func createDirKind(pathname string, fi fs.FileInfo) record {
 
 	for _, d := range ds {
 		child := createRecord(path.Join(pathname, d.Name()))
-		r.size += child.size
+		r.size += 1
 		r.children = append(r.children, child)
 	}
 
@@ -107,6 +90,23 @@ func createFileKind(pathname string, fi fs.FileInfo) record {
 	r.content = bytes
 
 	return r
+}
+
+func createArchive(out *os.File, records []record) {
+	for _, r := range records {
+		out.WriteString(r.name)
+		out.Write([]byte{0})
+
+		binary.Write(out, binary.LittleEndian, r.size)
+		binary.Write(out, binary.LittleEndian, r.kind)
+		binary.Write(out, binary.LittleEndian, r.perm)
+
+		if r.kind == kindDir {
+			createArchive(out, r.children)
+		} else {
+			out.Write(r.content)
+		}
+	}
 }
 
 func fatal(e error) {

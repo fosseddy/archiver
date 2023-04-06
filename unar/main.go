@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
+	"io"
 	"io/fs"
 	"encoding/binary"
 	"bytes"
 	"path"
 	"log"
+	"errors"
 )
 
 type recordKind int8
@@ -43,7 +45,10 @@ func main() {
 	for {
 		r, err := readRecord(data)
 		if err != nil {
-			break
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			fatal(err)
 		}
 		records = append(records, r)
 	}
@@ -74,14 +79,24 @@ func readRecord(data *bytes.Reader) (record, error) {
 		return r, err
 	}
 
-	if r.kind == kindDir {
-		child, err := readRecord(data)
-		if err != nil {
-			return r, err
-		}
-		r.children = append(r.children, child)
-	} else {
-		if r.size > 0 {
+	if r.size > 0 {
+		if r.kind == kindDir {
+			var size int64 = 0
+
+			for {
+				child, err := readRecord(data)
+				if err != nil {
+					return r, err
+				}
+
+				r.children = append(r.children, child)
+
+				size += 1
+				if r.size == size {
+					break
+				}
+			}
+		} else {
 			content := make([]byte, r.size)
 			_, err := data.Read(content)
 			if err != nil {
