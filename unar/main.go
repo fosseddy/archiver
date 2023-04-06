@@ -122,7 +122,7 @@ func createRecords(records []record, dirpath string) {
 		} else {
 			err := os.Mkdir(pathname, r.perm)
 			fatal(err)
-			createRecords(r.children, path.Join(pathname))
+			createRecords(r.children, pathname)
 		}
 	}
 }
