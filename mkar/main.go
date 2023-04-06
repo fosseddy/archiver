@@ -1,6 +1,3 @@
-//name size type perm
-//contents
-
 package main
 
 import (
